@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"os"
 	"strconv"
@@ -13,22 +12,30 @@ type prime struct {
 	isPrime bool
 }
 
+func isPrime(x int) bool {
+	top := int(math.Floor(math.Sqrt(float64(x))))
+	for i := 2; i <= top; i++ {
+		if x%i == 0 {
+			return false
+		}
+	}
+	return true
+}
+
 func main() {
-	max, err := strconv.Atoi(os.Args[1])
-	if err != nil {
-		log.Fatal(err)
-	}
-	nWorkers, err := strconv.Atoi(os.Args[2])
-	if err != nil {
-		log.Fatal(err)
-	}
+	max, _ := strconv.Atoi(os.Args[1])
+	nWorkers, _ := strconv.Atoi(os.Args[2])
 
 	workers := make(map[int]chan int)
 	results := make(chan prime)
 	for i := 0; i < nWorkers; i++ {
 		worker := make(chan int)
 		workers[i] = worker
-		go workPrimes(worker, results)
+		go func(in chan int, out chan prime) {
+			for work := range in {
+				out <- prime{work, isPrime(work)}
+			}
+		}(worker, results)
 	}
 
 	go func() {
@@ -52,22 +59,6 @@ func main() {
 			found++
 		}
 	}
-	fmt.Printf("found %d prime numbers from %d to %d.", found, 2, max)
 	close(results)
-}
-
-func workPrimes(in chan int, out chan prime) {
-	for work := range in {
-		out <- prime{work, isPrime(work)}
-	}
-}
-
-func isPrime(x int) bool {
-	top := int(math.Floor(math.Sqrt(float64(x))))
-	for i := 2; i <= top; i++ {
-		if x%i == 0 {
-			return false
-		}
-	}
-	return true
+	fmt.Printf("Found %d prime numbers from %d to %d.\n", found, 2, max)
 }
